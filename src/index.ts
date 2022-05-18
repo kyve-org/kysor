@@ -7,8 +7,7 @@ import {
 } from "fs";
 import download from "download";
 import { parseOptions, getPool, startProcess } from "./utils";
-import { KyveSDK, KyveWallet } from "@kyve/sdk";
-// import decompress from "decompress";
+import { KyveWallet } from "@kyve/sdk";
 import extract from "extract-zip";
 import path from "path";
 
@@ -21,6 +20,8 @@ const main = async () => {
 
   if (!existsSync("./kaiser")) {
     mkdirSync("./kaiser");
+    mkdirSync("./kaiser/keys");
+    mkdirSync("./kaiser/pools");
   }
 
   if (options.poolId === undefined) {
@@ -33,8 +34,8 @@ const main = async () => {
     process.exit(1);
   }
 
-  if (!existsSync(`./kaiser/pool-id-${options.poolId}`)) {
-    mkdirSync(`./kaiser/pool-id-${options.poolId}`);
+  if (!existsSync(`./kaiser/pools/${options.poolId}`)) {
+    mkdirSync(`./kaiser/pools/${options.poolId}`);
   }
 
   const pool = await getPool(wallet.getRestEndpoint(), options.poolId);
@@ -44,19 +45,17 @@ const main = async () => {
     process.exit(1);
   }
 
-  if (
-    existsSync(`./kaiser/pool-id-${options.poolId}/${pool.protocol.version}`)
-  ) {
+  if (existsSync(`./kaiser/pools/${options.poolId}/${pool.protocol.version}`)) {
     console.log(
       `Binary with version ${pool.protocol.version} already exists. Skipping download ...`
     );
   } else {
-    mkdirSync(`./kaiser/pool-id-${options.poolId}/${pool.protocol.version}`);
+    // mkdirSync(`./kaiser/pools/${options.poolId}/${pool.protocol.version}`);
 
     try {
       console.log("Downloading binary ...");
       writeFileSync(
-        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve.zip`,
+        `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve.zip`,
         await download(pool.config.version?.[options.target])
       );
     } catch (err) {
@@ -67,20 +66,20 @@ const main = async () => {
     try {
       console.log("Extracting binary ...");
       await extract(
-        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve.zip`,
+        `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve.zip`,
         {
           dir: path.resolve(
-            `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`
+            `./kaiser/pools/${options.poolId}/${pool.protocol.version}/`
           ),
         }
       );
       readdirSync(
-        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`
+        `./kaiser/pools/${options.poolId}/${pool.protocol.version}/`
       ).forEach((file) => {
         console.log(`Renaming ${file} ...`);
         renameSync(
-          `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/${file}`,
-          `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve`
+          `./kaiser/pools/${options.poolId}/${pool.protocol.version}/${file}`,
+          `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve`
         );
       });
     } catch (err) {
@@ -91,7 +90,7 @@ const main = async () => {
 
   try {
     const command = "./kyve";
-    const args = [`--keyfile`, `./../../keys/arweave.json`];
+    const args = [`--keyfile`, `./../../../keys/arweave.json`];
 
     if (options.poolId) {
       args.push("--poolId");
@@ -132,7 +131,7 @@ const main = async () => {
     }
 
     await startProcess(command, args, {
-      cwd: `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`,
+      cwd: `./kaiser/pools/${options.poolId}/${pool.protocol.version}/`,
     });
   } catch (err) {
     console.log("Found unexpected error. Exiting ...");

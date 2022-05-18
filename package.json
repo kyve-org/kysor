@@ -29,7 +29,6 @@
     "@kyve/sdk": "KYVENetwork/sdk#main",
     "axios": "^0.27.2",
     "commander": "^9.2.0",
-    "decompress": "^4.2.1",
     "download": "^8.0.0",
     "extract-zip": "^2.0.1"
   }
