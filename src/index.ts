@@ -19,6 +19,8 @@ const main = async () => {
   const wallet = new KyveWallet(options.network, options.mnemonic);
 
   while (true) {
+    console.log("Looking for new version ...");
+
     if (!existsSync("./kaiser")) {
       mkdirSync("./kaiser");
       mkdirSync("./kaiser/keys");
@@ -90,7 +92,7 @@ const main = async () => {
           readdirSync(
             `./kaiser/pools/${options.poolId}/${pool.protocol.version}/`
           ).forEach((file) => {
-            console.log(`Renaming ${file} ...`);
+            console.log(`Renaming ${file} to kyve ...`);
             renameSync(
               `./kaiser/pools/${options.poolId}/${pool.protocol.version}/${file}`,
               `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve`
