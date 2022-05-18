@@ -1,4 +1,9 @@
 import axios from "axios";
+import {
+  ChildProcessWithoutNullStreams,
+  spawn,
+  SpawnOptionsWithoutStdio,
+} from "child_process";
 import { program } from "commander";
 
 export const sleep = (ms: number) => {
@@ -16,7 +21,6 @@ export const parseOptions = () => {
       "The id of the pool you want to run on."
     )
     .requiredOption("-m, --mnemonic <string>", "Your mnemonic of your account.")
-    .option("-k, --keyfile <string>", "The path to your Arweave keyfile.")
     .option(
       "-s, --initialStake <number>",
       "Your initial stake the node should start with. Flag is ignored node is already staked [unit = $KYVE]."
@@ -92,5 +96,40 @@ export const getPool = async (
     }
 
     resolve(data);
+  });
+};
+
+export const startProcess = (
+  command: string,
+  args: string[],
+  options: SpawnOptionsWithoutStdio
+): Promise<void> => {
+  return new Promise<void>((resolve, reject) => {
+    try {
+      console.log("Starting child process ...");
+
+      const child = spawn(command, args, options);
+
+      child.stdout.pipe(process.stdout);
+      child.stderr.pipe(process.stderr);
+
+      child.stderr.on("data", (data: Buffer) => {
+        if (data.toString().includes("Running an invalid version.")) {
+          console.log("Found invalid version. Stopping ...");
+          child.kill();
+          resolve();
+        }
+      });
+
+      child.on("error", (err) => {
+        reject(err);
+      });
+
+      child.on("close", () => {
+        reject();
+      });
+    } catch (err) {
+      reject(err);
+    }
   });
 };

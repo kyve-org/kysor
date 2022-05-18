@@ -6,7 +6,7 @@ import {
   renameSync,
 } from "fs";
 import download from "download";
-import { parseOptions, getPool } from "./utils";
+import { parseOptions, getPool, startProcess } from "./utils";
 import { KyveSDK, KyveWallet } from "@kyve/sdk";
 // import decompress from "decompress";
 import extract from "extract-zip";
@@ -18,7 +18,6 @@ const main = async () => {
   const options = parseOptions();
 
   const wallet = new KyveWallet(options.network, options.mnemonic);
-  const sdk = new KyveSDK(wallet);
 
   if (!existsSync("./kaiser")) {
     mkdirSync("./kaiser");
@@ -40,22 +39,24 @@ const main = async () => {
 
   const pool = await getPool(wallet.getRestEndpoint(), options.poolId);
 
-  if (!pool.config.version?.tag) {
+  if (!pool.protocol.version) {
     console.log("Version tag not found");
     process.exit(1);
   }
 
   if (
-    existsSync(`./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}`)
+    existsSync(`./kaiser/pool-id-${options.poolId}/${pool.protocol.version}`)
   ) {
-    console.log("Version already exists. Skipping download ...");
+    console.log(
+      `Binary with version ${pool.protocol.version} already exists. Skipping download ...`
+    );
   } else {
-    mkdirSync(`./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}`);
+    mkdirSync(`./kaiser/pool-id-${options.poolId}/${pool.protocol.version}`);
 
     try {
       console.log("Downloading binary ...");
       writeFileSync(
-        `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/kyve.zip`,
+        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve.zip`,
         await download(pool.config.version?.[options.target])
       );
     } catch (err) {
@@ -66,20 +67,20 @@ const main = async () => {
     try {
       console.log("Extracting binary ...");
       await extract(
-        `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/kyve.zip`,
+        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve.zip`,
         {
           dir: path.resolve(
-            `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/bin/`
+            `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`
           ),
         }
       );
       readdirSync(
-        `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/bin/`
+        `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`
       ).forEach((file) => {
         console.log(`Renaming ${file} ...`);
         renameSync(
-          `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/bin/${file}`,
-          `./kaiser/pool-id-${options.poolId}/${pool.config.version?.tag}/bin/kyve`
+          `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/${file}`,
+          `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/kyve`
         );
       });
     } catch (err) {
@@ -87,6 +88,58 @@ const main = async () => {
       process.exit(1);
     }
   }
+
+  try {
+    const command = "./kyve";
+    const args = [`--keyfile`, `./../../keys/arweave.json`];
+
+    if (options.poolId) {
+      args.push("--poolId");
+      args.push(`${options.poolId}`);
+    }
+
+    if (options.mnemonic) {
+      args.push("--mnemonic");
+      args.push(`${options.mnemonic}`);
+    }
+
+    if (options.network) {
+      args.push("--network");
+      args.push(`${options.network}`);
+    }
+
+    if (options.initialStake) {
+      args.push("--initialStake");
+      args.push(`${options.initialStake}`);
+    }
+
+    if (options.space) {
+      args.push("--space");
+      args.push(`${options.space}`);
+    }
+
+    if (options.batchSize) {
+      args.push("--batchSize");
+      args.push(`${options.batchSize}`);
+    }
+
+    if (options.metrics) {
+      args.push("--metrics");
+    }
+
+    if (options.verbose) {
+      args.push("--verbose");
+    }
+
+    await startProcess(command, args, {
+      cwd: `./kaiser/pool-id-${options.poolId}/${pool.protocol.version}/`,
+    });
+  } catch (err) {
+    console.log("Found unexpected error. Exiting ...");
+    process.exit(1);
+  }
+
+  console.log("done");
 };
 
 main();
