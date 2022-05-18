@@ -78,6 +78,15 @@ export const getPool = async (
           pool.config = {};
         }
 
+        try {
+          pool.protocol.binaries = JSON.parse(pool.protocol.binaries);
+        } catch (error) {
+          console.log(
+            `Failed to parse the pool binaries: ${pool?.protocol.binaries}`
+          );
+          pool.protocol.binaries = {};
+        }
+
         console.log("Fetched pool state");
 
         data = pool;
@@ -99,7 +108,7 @@ export const getPool = async (
   });
 };
 
-export const startProcess = (
+export const startChildProcess = (
   command: string,
   args: string[],
   options: SpawnOptionsWithoutStdio
