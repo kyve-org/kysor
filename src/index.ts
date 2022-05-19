@@ -13,7 +13,6 @@ import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
 import config from "./../kaiser.conf";
-import { URLSearchParams } from "url";
 
 const logger: Logger = new Logger({
   displayFilePath: "hidden",
