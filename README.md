@@ -65,16 +65,33 @@ const config: IConfig = {
   // settings for protocol node
   // notice that mnemonic and keyfile is missing, those need to be files under the secrets directory
   protocolNode: {
+    // the ID of the pool you want to join as a validator
+    // an overview of all pools can be found here -> https://app.kyve.network
     poolId: 0,
+
+    // the network you want to run on
+    // currently only the testnet network "korellia" is available
     network: "korellia",
+
+    // the amount of $KYVE you want to stake
+    // will only get applied if you are not a validator yet
+    // once you are a validator you can manage your stake in the KYVE app
     initialStake: 100,
+
+    // the amount of bytes the node can use at max to cache data
+    // 1000000000 equals 1 GB which is usually enough
     space: 1000000000,
+
+    // specify verbose logging
+    // is often recommended in order to have a more detailed insight
     verbose: true,
   },
 };
 
 export default config;
 ```
+
+Since this file is commented and explained in detail the info regarding config properties can be found in this file.
 
 After entering your config like the `poolId` and your `initialStake` and other settings that are required to run a protocol node on a pool you can start KYSOR by running
 
