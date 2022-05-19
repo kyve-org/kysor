@@ -1,7 +1,7 @@
 import { IConfig } from "./src/faces";
 
 const config: IConfig = {
-  // target of the host machine, can be either "macos" or "linux"
+  // target of the host machine, can be either "linux" or "macos"
   // important for downloading the correct binaries
   hostTarget: "macos",
 
