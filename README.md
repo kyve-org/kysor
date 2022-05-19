@@ -8,7 +8,7 @@
 
 ## Why use KYSOR
 
-KYVE has a broad ecosystem of projects archiving their data with KYVE. To standardize different data from different projects KYVE created special runtimes for standard type like `@kyve/evm` for all EVM based chains. This has great benefits like standardized data but also has downsides for protocol node runners in terms of user experience.
+KYVE has a broad ecosystem of projects archiving their data with KYVE. To standardize different data from different projects KYVE created special runtimes for standards like `@kyve/evm` for all EVM based chains. This has great benefits but also has downsides for protocol node runners in terms of user experience.
 
 Without KYSOR for every pool the node runner has to get the binaries manually. If you want to run on another pool which has a different runtime you again have to manually obtain the binaries. Furthermore, if a pool ever upgrades to a newer protocol node version, you have the same procedure like before. Even worse, you might miss the update and receive a timeout slash for being offline
 
