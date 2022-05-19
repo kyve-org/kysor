@@ -19,7 +19,7 @@ export default {
 
   // whether Kaiser should auto download new binaries
   // if set to false, you have to insert the binaries manually
-  autoDownload: true,
+  autoDownload: false,
 
   // settings for protocol node
   // notice that mnemonic and keyfile is missing, those need to be files under the secrets directory

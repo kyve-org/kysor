@@ -86,7 +86,7 @@ const main = async () => {
 
     if (!pool.protocol.version) {
       logger.error("Version tag not found on pool. Exiting Kaiser ...");
-      process.exit(1);
+      process.exit(0);
     }
 
     if (
@@ -129,7 +129,7 @@ const main = async () => {
             rmdirSync(
               `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
             );
-            process.exit(1);
+            process.exit(0);
           }
 
           try {
@@ -145,14 +145,15 @@ const main = async () => {
           } catch (err) {
             logger.error("Error extracting binary to bin. Exiting Kaiser ...");
             logger.error(err);
-            process.exit(1);
+            process.exit(0);
           }
         } else {
           logger.error("No upgrade binaries found on pool. Exiting Kaiser ...");
-          process.exit(1);
+          process.exit(0);
         }
       } else {
         logger.error("Auto download is disabled. Exiting Kaiser ...");
+        process.exit(0);
       }
     }
 
