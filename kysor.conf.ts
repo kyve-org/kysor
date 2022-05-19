@@ -5,11 +5,11 @@ const config: IConfig = {
   // important for downloading the correct binaries
   hostTarget: "macos",
 
-  // whether Kaiser should auto download new binaries
+  // whether KYSOR should auto download new binaries
   // if set to false, you have to insert the binaries manually
   autoDownload: true,
 
-  // whether Kaiser should verify the checksums of downloaded binaries
+  // whether KYSOR should verify the checksums of downloaded binaries
   // if autoDownload is false this option can be ignored
   verifyChecksums: true,
 

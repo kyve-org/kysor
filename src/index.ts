@@ -12,7 +12,7 @@ import { KyveWallet } from "@kyve/sdk";
 import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
-import config from "./../kaiser.conf";
+import config from "./../kysor.conf";
 
 const logger: Logger = new Logger({
   displayFilePath: "hidden",
@@ -29,24 +29,24 @@ const logger: Logger = new Logger({
 });
 
 const main = async () => {
-  logger.info("Starting Kaiser ...");
+  logger.info("Starting KYSOR ...");
   logger.info("Validating files ...");
 
-  if (!existsSync("./kaiser.conf.ts")) {
-    logger.error(`Config file "kaiser.conf.ts" missing in home directory`);
+  if (!existsSync("./kysor.conf.ts")) {
+    logger.error(`Config file "kysor.conf.ts" missing in home directory`);
     process.exit(1);
   }
 
-  logger.info("Found kaiser.conf.ts");
+  logger.info("Found kysor.conf.ts");
 
   if (!existsSync("./secrets")) {
-    logger.error(`Directory "secrets" missing. Exiting Kaiser ...`);
+    logger.error(`Directory "secrets" missing. Exiting KYSOR ...`);
     process.exit(1);
   }
 
   if (!existsSync("./secrets/arweave.json")) {
     logger.error(
-      `Secret "arweave.json" missing in secrets directory. Exiting Kaiser ...`
+      `Secret "arweave.json" missing in secrets directory. Exiting KYSOR ...`
     );
     process.exit(1);
   }
@@ -55,7 +55,7 @@ const main = async () => {
 
   if (!existsSync("./secrets/mnemonic.txt")) {
     logger.error(
-      `Secret "mnemonic.txt" missing in secrets directory. Exiting Kaiser ...`
+      `Secret "mnemonic.txt" missing in secrets directory. Exiting KYSOR ...`
     );
     process.exit(1);
   }
@@ -85,7 +85,7 @@ const main = async () => {
     );
 
     if (!pool.protocol.version) {
-      logger.error("Version tag not found on pool. Exiting Kaiser ...");
+      logger.error("Version tag not found on pool. Exiting KYSOR ...");
       process.exit(0);
     }
 
@@ -103,7 +103,7 @@ const main = async () => {
 
       // if binary needs to be downloaded and autoDownload is disable exit
       if (!config.autoDownload) {
-        logger.error("Auto download is disabled. Exiting Kaiser ...");
+        logger.error("Auto download is disabled. Exiting KYSOR ...");
         process.exit(0);
       }
 
@@ -111,7 +111,7 @@ const main = async () => {
 
       // if download link was not found exit
       if (!downloadLink) {
-        logger.error("No upgrade binaries found on pool. Exiting Kaiser ...");
+        logger.error("No upgrade binaries found on pool. Exiting KYSOR ...");
         process.exit(0);
       }
 
@@ -121,7 +121,7 @@ const main = async () => {
 
       // if checksum was not found and verifyChecksums is enabled exit
       if (!checksum && config.verifyChecksums) {
-        logger.error("No checksum found on binary. Exiting Kaiser ...");
+        logger.error("No checksum found on binary. Exiting KYSOR ...");
         process.exit(0);
       }
 
@@ -143,7 +143,7 @@ const main = async () => {
         );
       } catch (err) {
         logger.error(
-          `Error downloading binary from ${downloadLink}. Exiting Kaiser ...`
+          `Error downloading binary from ${downloadLink}. Exiting KYSOR ...`
         );
         logger.error(err);
 
@@ -168,7 +168,7 @@ const main = async () => {
           }
         );
       } catch (err) {
-        logger.error("Error extracting binary to bin. Exiting Kaiser ...");
+        logger.error("Error extracting binary to bin. Exiting KYSOR ...");
         logger.error(err);
 
         // exit and delete version folders if binary could not be extracted
@@ -198,7 +198,7 @@ const main = async () => {
         if (checksum === localChecksum) {
           logger.info("Checksums are equal. Continuing ...");
         } else {
-          logger.info("Checksums are not equal. Exiting Kaiser ...");
+          logger.info("Checksums are not equal. Exiting KYSOR ...");
           process.exit(0);
         }
       }
@@ -245,7 +245,7 @@ const main = async () => {
 
       logger.info("Stopped child process ...");
     } catch (err) {
-      logger.error("Found unexpected runtime error. Exiting Kaiser ...");
+      logger.error("Found unexpected runtime error. Exiting KYSOR ...");
       logger.error(err);
       process.exit(1);
     }

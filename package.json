@@ -1,8 +1,8 @@
 {
-  "name": "kaiser",
+  "name": "kysor",
   "version": "0.0.0",
   "description": "The cosmovisor for KYVE protocol nodes",
-  "repository": "git@github.com:kyve-org/kaiser.git",
+  "repository": "git@github.com:kyve-org/kysor.git",
   "author": "Troy Kessler <troy@kyve.network>",
   "license": "MIT",
   "scripts": {
