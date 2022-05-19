@@ -7,12 +7,13 @@ import {
   readFileSync,
 } from "fs";
 import download from "download";
-import { getPool, startChildProcess } from "./utils";
+import { getChecksum, getPool, startChildProcess } from "./utils";
 import { KyveWallet } from "@kyve/sdk";
 import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
 import config from "./../kaiser.conf";
+import { URLSearchParams } from "url";
 
 const logger: Logger = new Logger({
   displayFilePath: "hidden",
@@ -89,6 +90,7 @@ const main = async () => {
       process.exit(0);
     }
 
+    // check if directory with version already exists
     if (
       existsSync(
         `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
@@ -100,71 +102,115 @@ const main = async () => {
         `Binary with version ${pool.protocol.version} not found locally`
       );
 
-      if (config.autoDownload) {
-        if (pool.protocol.binaries[config.hostTarget]) {
-          logger.info("Found downloadable binary on pool");
-
-          mkdirSync(
-            `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-          );
-          mkdirSync(
-            `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
-          );
-
-          try {
-            logger.info(
-              `Downloading ${pool.protocol.binaries[config.hostTarget]} ...`
-            );
-            writeFileSync(
-              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
-              await download(pool.protocol.binaries[config.hostTarget])
-            );
-          } catch (err) {
-            logger.error(
-              `Error downloading binary from ${
-                pool.protocol.binaries[config.hostTarget]
-              }. Exiting Kaiser ...`
-            );
-            logger.error(err);
-            rmdirSync(
-              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-            );
-            process.exit(0);
-          }
-
-          try {
-            logger.info("Extracting binary to bin ...");
-            await extract(
-              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
-              {
-                dir: path.resolve(
-                  `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
-                ),
-              }
-            );
-          } catch (err) {
-            logger.error("Error extracting binary to bin. Exiting Kaiser ...");
-            logger.error(err);
-            process.exit(0);
-          }
-        } else {
-          logger.error("No upgrade binaries found on pool. Exiting Kaiser ...");
-          process.exit(0);
-        }
-      } else {
+      // if binary needs to be downloaded and autoDownload is disable exit
+      if (!config.autoDownload) {
         logger.error("Auto download is disabled. Exiting Kaiser ...");
         process.exit(0);
+      }
+
+      const downloadLink = pool.protocol.binaries[config.hostTarget];
+
+      // if download link was not found exit
+      if (!downloadLink) {
+        logger.error("No upgrade binaries found on pool. Exiting Kaiser ...");
+        process.exit(0);
+      }
+
+      logger.info("Found downloadable binary on pool");
+
+      const checksum = new URL(downloadLink).searchParams.get("checksum") || "";
+
+      // if checksum was not found and verifyChecksums is enabled exit
+      if (!checksum && config.verifyChecksums) {
+        logger.error("No checksum found on binary. Exiting Kaiser ...");
+        process.exit(0);
+      }
+
+      // create directories for new version
+      mkdirSync(
+        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+      );
+      mkdirSync(
+        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
+      );
+
+      // try to download binary
+      try {
+        logger.info(`Downloading ${downloadLink} ...`);
+
+        writeFileSync(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+          await download(downloadLink)
+        );
+      } catch (err) {
+        logger.error(
+          `Error downloading binary from ${downloadLink}. Exiting Kaiser ...`
+        );
+        logger.error(err);
+
+        // exit and delete version folders if binary could not be downloaded
+        rmdirSync(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
+        );
+        rmdirSync(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+        );
+        process.exit(0);
+      }
+
+      try {
+        logger.info("Extracting binary to bin ...");
+        await extract(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+          {
+            dir: path.resolve(
+              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+            ),
+          }
+        );
+      } catch (err) {
+        logger.error("Error extracting binary to bin. Exiting Kaiser ...");
+        logger.error(err);
+
+        // exit and delete version folders if binary could not be extracted
+        rmdirSync(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
+        );
+        rmdirSync(
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+        );
+        process.exit(0);
+      }
+
+      const binName = readdirSync(
+        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+      )[0];
+      const binPath = `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/${binName}`;
+
+      if (config.verifyChecksums) {
+        const localChecksum = await getChecksum(binPath);
+
+        logger.info("Comparing binary checksums ...");
+        console.log();
+        logger.info(`Provided checksum  = ${checksum}`);
+        logger.info(`Local checksum     = ${localChecksum}`);
+        console.log();
+
+        if (checksum === localChecksum) {
+          logger.info("Checksums are equal. Continuing ...");
+        } else {
+          logger.info("Checksums are not equal. Exiting Kaiser ...");
+          process.exit(0);
+        }
       }
     }
 
     try {
-      const command = `./pools/${config.protocolNode.poolId}/${
-        pool.protocol.version
-      }/bin/${
-        readdirSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
-        )[0]
-      }`;
+      const binName = readdirSync(
+        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+      )[0];
+      const binPath = `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/${binName}`;
+
       const args = [
         `--poolId`,
         `${config.protocolNode.poolId}`,
@@ -192,11 +238,11 @@ const main = async () => {
 
       logger.info("Starting child process ...");
 
-      console.log("\n\n");
+      console.log("\n");
 
-      await startChildProcess(command, args, {});
+      await startChildProcess(binPath, args, {});
 
-      console.log("\n\n");
+      console.log("\n");
 
       logger.info("Stopped child process ...");
     } catch (err) {

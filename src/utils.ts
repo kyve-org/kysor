@@ -1,6 +1,8 @@
 import axios from "axios";
 import { spawn, SpawnOptionsWithoutStdio } from "child_process";
 import { Logger } from "tslog";
+import crypto from "crypto";
+import { createReadStream } from "fs";
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -91,5 +93,22 @@ export const startChildProcess = (
     } catch (err) {
       reject(err);
     }
+  });
+};
+
+export const getChecksum = (path: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const input = createReadStream(path);
+
+    input.on("error", reject);
+
+    input.on("data", (chunk: Buffer) => {
+      hash.update(chunk);
+    });
+
+    input.on("close", () => {
+      resolve(hash.digest("hex"));
+    });
   });
 };
