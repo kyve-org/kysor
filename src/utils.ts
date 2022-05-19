@@ -5,6 +5,7 @@ import {
   SpawnOptionsWithoutStdio,
 } from "child_process";
 import { program } from "commander";
+import { Logger } from "tslog";
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -57,9 +58,10 @@ export const parseOptions = () => {
 
 export const getPool = async (
   endpoint: string,
-  poolId: string
+  poolId: string,
+  logger: Logger
 ): Promise<any> => {
-  console.log("Attempting to fetch pool state.");
+  logger.info("Attempting to fetch pool state.");
 
   return new Promise(async (resolve) => {
     let requests = 1;
@@ -74,25 +76,25 @@ export const getPool = async (
         try {
           pool.config = JSON.parse(pool.config);
         } catch (error) {
-          console.log(`Failed to parse the pool config: ${pool?.config}`);
+          logger.error(`Failed to parse the pool config: ${pool?.config}`);
           pool.config = {};
         }
 
         try {
           pool.protocol.binaries = JSON.parse(pool.protocol.binaries);
         } catch (error) {
-          console.log(
+          logger.error(
             `Failed to parse the pool binaries: ${pool?.protocol.binaries}`
           );
           pool.protocol.binaries = {};
         }
 
-        console.log("Fetched pool state");
+        logger.info("Fetched pool state");
 
         data = pool;
         break;
       } catch (error) {
-        console.log(
+        logger.error(
           `Failed to fetch pool state. Retrying in ${requests * 10}s ...`
         );
         await sleep(requests * 10 * 1000);
@@ -115,8 +117,6 @@ export const startChildProcess = (
 ): Promise<void> => {
   return new Promise<void>((resolve, reject) => {
     try {
-      console.log("Starting child process ...");
-
       const child = spawn(command, args, options);
 
       child.stdout.pipe(process.stdout);
@@ -124,17 +124,18 @@ export const startChildProcess = (
 
       child.stderr.on("data", (data: Buffer) => {
         if (data.toString().includes("Running an invalid version.")) {
-          console.log("Found invalid version. Stopping ...");
           child.kill();
           resolve();
         }
       });
 
       child.on("error", (err) => {
+        child.kill();
         reject(err);
       });
 
       child.on("close", () => {
+        child.kill();
         reject();
       });
     } catch (err) {
