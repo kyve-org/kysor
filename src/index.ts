@@ -4,13 +4,15 @@ import {
   writeFileSync,
   readdirSync,
   rmdirSync,
+  readFileSync,
 } from "fs";
 import download from "download";
-import { parseOptions, getPool, startChildProcess } from "./utils";
+import { getPool, startChildProcess } from "./utils";
 import { KyveWallet } from "@kyve/sdk";
 import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
+import config from "./../kaiser.conf";
 
 const logger: Logger = new Logger({
   displayFilePath: "hidden",
@@ -28,147 +30,162 @@ const logger: Logger = new Logger({
 
 const main = async () => {
   logger.info("Starting Kaiser ...");
+  logger.info("Validating files ...");
 
-  const options = parseOptions();
+  if (!existsSync("./kaiser.conf.ts")) {
+    logger.error(`Config file "kaiser.conf.ts" missing in home directory`);
+    process.exit(1);
+  }
 
-  const wallet = new KyveWallet(options.network, options.mnemonic);
+  logger.info("Found kaiser.conf.ts");
+
+  if (!existsSync("./secrets")) {
+    logger.error(`Directory "secrets" missing. Exiting Kaiser ...`);
+    process.exit(1);
+  }
+
+  if (!existsSync("./secrets/arweave.json")) {
+    logger.error(
+      `Secret "arweave.json" missing in secrets directory. Exiting Kaiser ...`
+    );
+    process.exit(1);
+  }
+
+  logger.info("Found arweave.json");
+
+  if (!existsSync("./secrets/mnemonic.txt")) {
+    logger.error(
+      `Secret "mnemonic.txt" missing in secrets directory. Exiting Kaiser ...`
+    );
+    process.exit(1);
+  }
+
+  logger.info("Found mnemonic.txt");
+
+  const mnemonic = readFileSync("./secrets/mnemonic.txt", "utf-8");
+  const wallet = new KyveWallet(config.protocolNode.network, mnemonic);
 
   while (true) {
-    logger.info("Looking for new version ...");
-
-    if (!existsSync("./kaiser")) {
-      mkdirSync("./kaiser");
-      mkdirSync("./kaiser/keys");
-      mkdirSync("./kaiser/pools");
+    // create pool directory if it does not exist yet
+    if (!existsSync("./pools")) {
+      logger.info(`Creating "pools" directory ...`);
+      mkdirSync("./pools");
     }
 
-    if (options.poolId === undefined) {
-      logger.error("PoolId undefined");
-      process.exit(1);
+    // create pool id directory if does not exist yet
+    if (!existsSync(`./pools/${config.protocolNode.poolId}`)) {
+      mkdirSync(`./pools/${config.protocolNode.poolId}`);
     }
 
-    if (options.target !== "macos" && options.target !== "linux") {
-      logger.error("Unknown target");
-      process.exit(1);
-    }
-
-    if (!existsSync(`./kaiser/pools/${options.poolId}`)) {
-      mkdirSync(`./kaiser/pools/${options.poolId}`);
-    }
-
+    // fetch pool state to get version
     const pool = await getPool(
       wallet.getRestEndpoint(),
-      options.poolId,
+      config.protocolNode.poolId,
       logger
     );
 
     if (!pool.protocol.version) {
-      logger.error("Version tag not found");
+      logger.error("Version tag not found on pool. Exiting Kaiser ...");
       process.exit(1);
     }
 
     if (
-      existsSync(`./kaiser/pools/${options.poolId}/${pool.protocol.version}`)
+      existsSync(
+        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+      )
     ) {
-      logger.info(
-        `Binary with version ${pool.protocol.version} already exists. Skipping download ...`
-      );
+      logger.info(`Binary with version ${pool.protocol.version} found locally`);
     } else {
-      logger.info(`Found new version = ${pool.protocol.version}`);
+      logger.info(
+        `Binary with version ${pool.protocol.version} not found locally`
+      );
 
-      if (pool.protocol.binaries[options.target]) {
-        logger.info(
-          `Found new binary = ${
-            pool.protocol.binaries[options.target]
-          }. Downloading ...`
-        );
+      if (config.autoDownload) {
+        if (pool.protocol.binaries[config.hostTarget]) {
+          logger.info("Found downloadable binary on pool");
 
-        mkdirSync(`./kaiser/pools/${options.poolId}/${pool.protocol.version}`);
-        mkdirSync(
-          `./kaiser/pools/${options.poolId}/${pool.protocol.version}/bin`
-        );
+          mkdirSync(
+            `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+          );
+          mkdirSync(
+            `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
+          );
 
-        try {
-          writeFileSync(
-            `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve.zip`,
-            await download(pool.protocol.binaries[options.target])
-          );
-        } catch (err) {
-          logger.error(
-            `Error downloading binary from ${
-              pool.protocol.binaries[options.target]
-            }. Exiting Kaiser ...`
-          );
-          logger.error(err);
-          rmdirSync(
-            `./kaiser/pools/${options.poolId}/${pool.protocol.version}`
-          );
-          process.exit(1);
-        }
+          try {
+            logger.info(
+              `Downloading ${pool.protocol.binaries[config.hostTarget]} ...`
+            );
+            writeFileSync(
+              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+              await download(pool.protocol.binaries[config.hostTarget])
+            );
+          } catch (err) {
+            logger.error(
+              `Error downloading binary from ${
+                pool.protocol.binaries[config.hostTarget]
+              }. Exiting Kaiser ...`
+            );
+            logger.error(err);
+            rmdirSync(
+              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
+            );
+            process.exit(1);
+          }
 
-        try {
-          logger.info("Extracting binary ...");
-          await extract(
-            `./kaiser/pools/${options.poolId}/${pool.protocol.version}/kyve.zip`,
-            {
-              dir: path.resolve(
-                `./kaiser/pools/${options.poolId}/${pool.protocol.version}/bin/`
-              ),
-            }
-          );
-        } catch (err) {
-          logger.error("Error extracting binary. Exiting Kaiser ...");
+          try {
+            logger.info("Extracting binary to bin ...");
+            await extract(
+              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+              {
+                dir: path.resolve(
+                  `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+                ),
+              }
+            );
+          } catch (err) {
+            logger.error("Error extracting binary to bin. Exiting Kaiser ...");
+            logger.error(err);
+            process.exit(1);
+          }
+        } else {
+          logger.error("No upgrade binaries found on pool. Exiting Kaiser ...");
           process.exit(1);
         }
       } else {
-        logger.error("No upgrade binaries found. Exiting Kaiser ...");
-        process.exit(1);
+        logger.error("Auto download is disabled. Exiting Kaiser ...");
       }
     }
 
     try {
-      const command = `./pools/${options.poolId}/${pool.protocol.version}/bin/${
+      const command = `./pools/${config.protocolNode.poolId}/${
+        pool.protocol.version
+      }/bin/${
         readdirSync(
-          `./kaiser/pools/${options.poolId}/${pool.protocol.version}/bin/`
+          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
         )[0]
       }`;
-      const args = [`--keyfile`, `./keys/arweave.json`];
+      const args = [
+        `--poolId`,
+        `${config.protocolNode.poolId}`,
+        `--mnemonic`,
+        `${mnemonic}`,
+        `--network`,
+        `${config.protocolNode.network}`,
+        `--keyfile`,
+        `./secrets/arweave.json`,
+      ];
 
-      if (options.poolId) {
-        args.push("--poolId");
-        args.push(`${options.poolId}`);
-      }
-
-      if (options.mnemonic) {
-        args.push("--mnemonic");
-        args.push(`${options.mnemonic}`);
-      }
-
-      if (options.network) {
-        args.push("--network");
-        args.push(`${options.network}`);
-      }
-
-      if (options.initialStake) {
+      if (config.protocolNode.initialStake) {
         args.push("--initialStake");
-        args.push(`${options.initialStake}`);
+        args.push(`${config.protocolNode.initialStake}`);
       }
 
-      if (options.space) {
+      if (config.protocolNode.space) {
         args.push("--space");
-        args.push(`${options.space}`);
+        args.push(`${config.protocolNode.space}`);
       }
 
-      if (options.batchSize) {
-        args.push("--batchSize");
-        args.push(`${options.batchSize}`);
-      }
-
-      if (options.metrics) {
-        args.push("--metrics");
-      }
-
-      if (options.verbose) {
+      if (config.protocolNode.verbose) {
         args.push("--verbose");
       }
 
@@ -176,9 +193,7 @@ const main = async () => {
 
       console.log("\n\n");
 
-      await startChildProcess(command, args, {
-        cwd: `./kaiser/`,
-      });
+      await startChildProcess(command, args, {});
 
       console.log("\n\n");
 

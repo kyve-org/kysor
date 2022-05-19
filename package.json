@@ -7,28 +7,18 @@
   "license": "MIT",
   "scripts": {
     "build": "rimraf dist && tsc",
-    "build:binaries": "yarn build && rimraf out && pkg --output out/kaiser package.json",
-    "start": "rimraf dist && tsc && node ./dist/index.js"
+    "start": "rimraf dist && tsc && node ./dist/src/index.js"
   },
-  "bin": "./dist/index.js",
-  "pkg": {
-    "scripts": "./dist/index.js",
-    "targets": [
-      "latest-linux-x64",
-      "latest-macos-x64"
-    ]
-  },
+  "bin": "./dist/src/index.js",
   "devDependencies": {
     "@types/download": "^8.0.1",
     "@types/node": "^17.0.33",
-    "pkg": "^5.6.0",
     "rimraf": "^3.0.2",
     "typescript": "^4.6.4"
   },
   "dependencies": {
     "@kyve/sdk": "KYVENetwork/sdk#main",
     "axios": "^0.27.2",
-    "commander": "^9.2.0",
     "download": "^8.0.0",
     "extract-zip": "^2.0.1",
     "tslog": "^3.3.3"

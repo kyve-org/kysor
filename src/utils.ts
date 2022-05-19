@@ -1,64 +1,14 @@
 import axios from "axios";
-import {
-  ChildProcessWithoutNullStreams,
-  spawn,
-  SpawnOptionsWithoutStdio,
-} from "child_process";
-import { program } from "commander";
+import { spawn, SpawnOptionsWithoutStdio } from "child_process";
 import { Logger } from "tslog";
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-export const parseOptions = () => {
-  program
-    .requiredOption(
-      "--target <string>",
-      "The target of the binaries [linux, macos]."
-    )
-    .requiredOption(
-      "-p, --poolId <number>",
-      "The id of the pool you want to run on."
-    )
-    .requiredOption("-m, --mnemonic <string>", "Your mnemonic of your account.")
-    .option(
-      "-s, --initialStake <number>",
-      "Your initial stake the node should start with. Flag is ignored node is already staked [unit = $KYVE]."
-    )
-    .option(
-      "-n, --network <string>",
-      "The chain id of the network. [optional, default = korellia]",
-      "korellia"
-    )
-    .option(
-      "-sp, --space <number>",
-      "The size of disk space in bytes the node is allowed to use. [optional, default = 1000000000 (1 GB)]",
-      "1000000000"
-    )
-    .option(
-      "-b, --batchSize <number>",
-      "The batch size of fetching items from datasource. For synchronous fetching enter 1. [optional, default = 1]",
-      "1"
-    )
-    .option(
-      "--metrics",
-      "Run Prometheus metrics server. [optional, default = false]",
-      false
-    )
-    .option(
-      "-v, --verbose",
-      "Run node in verbose mode. [optional, default = false]",
-      false
-    );
-
-  program.parse();
-  return program.opts();
-};
-
 export const getPool = async (
   endpoint: string,
-  poolId: string,
+  poolId: number,
   logger: Logger
 ): Promise<any> => {
   logger.info("Attempting to fetch pool state.");

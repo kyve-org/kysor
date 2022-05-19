@@ -1,5 +1,8 @@
 dist
 node_modules
 .DS_Store
-kaiser/
+db/
+logs/
+secrets/
+pools/
 out/
