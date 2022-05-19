@@ -12,12 +12,12 @@ KYVE has a broad ecosystem of projects archiving their data with KYVE. To standa
 
 Without KYSOR for every pool the node runner has to get the binaries manually. If you want to run on another pool which has a different runtime you again have to manually obtain the binaries. Furthermore, if a pool ever upgrades to a newer protocol node version, you have the same procedure like before. Even worse, you might miss the update and receive a timeout slash for being offline
 
-KYSOR solves the following issues:
+**Running nodes with KYSOR has the following benefits:**
 
-- Only use one program to run on every pool
-- Installing or compiling protocol binaries manually for every pool
-- Getting the new upgrade binaries during a pool upgrade
-- Make running protocol nodes standardized and easier
+- Only use **one** program to run on **every** pool
+- Not installing and compiling protocol binaries **manually** for every pool
+- Getting the new upgrade binaries during a pool upgrade **automatically** and therefore **don't risk timeout slashes**
+- Make running protocol nodes **standardized** and **easier**
 
 ## Installation
 
