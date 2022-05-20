@@ -191,8 +191,8 @@ const main = async () => {
 
         logger.info("Comparing binary checksums ...");
         console.log();
-        logger.info(`Provided checksum  = ${checksum}`);
-        logger.info(`Local checksum     = ${localChecksum}`);
+        logger.info(`Found checksum = ${checksum}`);
+        logger.info(`Local checksum = ${localChecksum}`);
         console.log();
 
         if (checksum === localChecksum) {
