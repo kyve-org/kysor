@@ -5,6 +5,7 @@ import {
   readdirSync,
   rmdirSync,
   readFileSync,
+  unlinkSync,
 } from "fs";
 import download from "download";
 import { getChecksum, getPool, startChildProcess } from "./utils";
@@ -67,14 +68,9 @@ const main = async () => {
 
   while (true) {
     // create pool directory if it does not exist yet
-    if (!existsSync("./pools")) {
-      logger.info(`Creating "pools" directory ...`);
-      mkdirSync("./pools");
-    }
-
-    // create pool id directory if does not exist yet
-    if (!existsSync(`./pools/${config.protocolNode.poolId}`)) {
-      mkdirSync(`./pools/${config.protocolNode.poolId}`);
+    if (!existsSync("./runtimes")) {
+      logger.info(`Creating "runtimes" directory ...`);
+      mkdirSync("./runtimes");
     }
 
     // fetch pool state to get version
@@ -89,16 +85,19 @@ const main = async () => {
       process.exit(0);
     }
 
+    // create pool runtime directory if does not exist yet
+    if (!existsSync(`./runtimes/${pool.runtime}`)) {
+      mkdirSync(`./runtimes/${pool.runtime}`, { recursive: true });
+    }
+
     // check if directory with version already exists
-    if (
-      existsSync(
-        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-      )
-    ) {
-      logger.info(`Binary with version ${pool.protocol.version} found locally`);
+    if (existsSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`)) {
+      logger.info(
+        `Binary of runtime "${pool.runtime}" with version ${pool.protocol.version} found locally`
+      );
     } else {
       logger.info(
-        `Binary with version ${pool.protocol.version} not found locally`
+        `Binary of runtime "${pool.runtime}" with version ${pool.protocol.version} not found locally`
       );
 
       // if binary needs to be downloaded and autoDownload is disable exit
@@ -126,19 +125,14 @@ const main = async () => {
       }
 
       // create directories for new version
-      mkdirSync(
-        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-      );
-      mkdirSync(
-        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
-      );
+      mkdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
 
       // try to download binary
       try {
         logger.info(`Downloading ${downloadLink} ...`);
 
         writeFileSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+          `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`,
           await download(downloadLink)
         );
       } catch (err) {
@@ -148,43 +142,48 @@ const main = async () => {
         logger.error(err);
 
         // exit and delete version folders if binary could not be downloaded
-        rmdirSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
-        );
-        rmdirSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-        );
+        rmdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
         process.exit(0);
       }
 
       try {
-        logger.info("Extracting binary to bin ...");
+        logger.info(
+          `Extracting binary to "./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip" ...`
+        );
         await extract(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/kyve.zip`,
+          `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`,
           {
             dir: path.resolve(
-              `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+              `./runtimes/${pool.runtime}/${pool.protocol.version}/`
             ),
           }
         );
+
+        // check if kyve.zip exists
+        if (
+          existsSync(
+            `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`
+          )
+        ) {
+          logger.info(`Deleting kyve.zip ...`);
+          // delete zip afterwards
+          unlinkSync(
+            `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`
+          );
+        }
       } catch (err) {
         logger.error("Error extracting binary to bin. Exiting KYSOR ...");
         logger.error(err);
 
         // exit and delete version folders if binary could not be extracted
-        rmdirSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin`
-        );
-        rmdirSync(
-          `./pools/${config.protocolNode.poolId}/${pool.protocol.version}`
-        );
+        rmdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
         process.exit(0);
       }
 
       const binName = readdirSync(
-        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+        `./runtimes/${pool.runtime}/${pool.protocol.version}/`
       )[0];
-      const binPath = `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/${binName}`;
+      const binPath = `./runtimes/${pool.runtime}/${pool.protocol.version}/${binName}`;
 
       if (config.verifyChecksums) {
         const localChecksum = await getChecksum(binPath);
@@ -206,9 +205,9 @@ const main = async () => {
 
     try {
       const binName = readdirSync(
-        `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/`
+        `./runtimes/${pool.runtime}/${pool.protocol.version}/`
       )[0];
-      const binPath = `./pools/${config.protocolNode.poolId}/${pool.protocol.version}/bin/${binName}`;
+      const binPath = `./runtimes/${pool.runtime}/${pool.protocol.version}/${binName}`;
 
       const args = [
         `--poolId`,
