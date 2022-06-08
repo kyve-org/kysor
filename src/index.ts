@@ -63,7 +63,7 @@ const main = async () => {
 
   logger.info("Found mnemonic.txt");
 
-  const mnemonic = readFileSync("./secrets/mnemonic.txt", "utf-8").replace(/\n/g, '');
+  const mnemonic = readFileSync("./secrets/mnemonic.txt", "utf-8").replace(/\n/g, '').trim();
   const wallet = new KyveWallet(config.protocolNode.network, mnemonic);
 
   while (true) {

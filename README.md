@@ -28,6 +28,14 @@ git clone https://github.com/kyve-org/kysor.git
 cd kysor
 ```
 
+## Install dependencies
+
+In order to get started run the following in the project root directory:
+
+```bash
+yarn install
+```
+
 ## Setup
 
 General directory structure and important files:
