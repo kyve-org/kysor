@@ -4,12 +4,10 @@ import {
   writeFileSync,
   readdirSync,
   rmdirSync,
-  readFileSync,
   unlinkSync,
 } from "fs";
 import download from "download";
 import { getChecksum, getPool, startChildProcess } from "./utils";
-import { KyveWallet } from "@kyve/sdk";
 import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
@@ -40,32 +38,6 @@ const main = async () => {
 
   logger.info("Found kysor.conf.ts");
 
-  if (!existsSync("./secrets")) {
-    logger.error(`Directory "secrets" missing. Exiting KYSOR ...`);
-    process.exit(1);
-  }
-
-  if (!existsSync("./secrets/arweave.json")) {
-    logger.error(
-      `Secret "arweave.json" missing in secrets directory. Exiting KYSOR ...`
-    );
-    process.exit(1);
-  }
-
-  logger.info("Found arweave.json");
-
-  if (!existsSync("./secrets/mnemonic.txt")) {
-    logger.error(
-      `Secret "mnemonic.txt" missing in secrets directory. Exiting KYSOR ...`
-    );
-    process.exit(1);
-  }
-
-  logger.info("Found mnemonic.txt");
-
-  const mnemonic = readFileSync("./secrets/mnemonic.txt", "utf-8").replace(/\n/g, '').trim();
-  const wallet = new KyveWallet(config.protocolNode.network, mnemonic);
-
   while (true) {
     // create pool directory if it does not exist yet
     if (!existsSync("./runtimes")) {
@@ -74,30 +46,39 @@ const main = async () => {
     }
 
     // fetch pool state to get version
+    // TODO: hardcode URL until new sdk gets released
     const pool = await getPool(
-      wallet.getRestEndpoint(),
-      config.protocolNode.poolId,
+      `https://api.${config.protocolNode.network}.kyve.network`,
+      config.protocolNode.pool,
       logger
     );
 
-    if (!pool.protocol.version) {
+    const runtime = pool.data.runtime;
+    const version = pool.data.protocol.version;
+
+    if (!runtime) {
+      logger.error("Runtime not found on pool. Exiting KYSOR ...");
+      process.exit(0);
+    }
+
+    if (!version) {
       logger.error("Version tag not found on pool. Exiting KYSOR ...");
       process.exit(0);
     }
 
     // create pool runtime directory if does not exist yet
-    if (!existsSync(`./runtimes/${pool.runtime}`)) {
-      mkdirSync(`./runtimes/${pool.runtime}`, { recursive: true });
+    if (!existsSync(`./runtimes/${runtime}`)) {
+      mkdirSync(`./runtimes/${runtime}`, { recursive: true });
     }
 
     // check if directory with version already exists
-    if (existsSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`)) {
+    if (existsSync(`./runtimes/${runtime}/${version}`)) {
       logger.info(
-        `Binary of runtime "${pool.runtime}" with version ${pool.protocol.version} found locally`
+        `Binary of runtime "${runtime}" with version ${version} found locally`
       );
     } else {
       logger.info(
-        `Binary of runtime "${pool.runtime}" with version ${pool.protocol.version} not found locally`
+        `Binary of runtime "${runtime}" with version ${version} not found locally`
       );
 
       // if binary needs to be downloaded and autoDownload is disable exit
@@ -106,7 +87,7 @@ const main = async () => {
         process.exit(0);
       }
 
-      const downloadLink = pool.protocol.binaries[config.hostTarget];
+      const downloadLink = pool.data.protocol.binaries[config.hostTarget];
 
       // if download link was not found exit
       if (!downloadLink) {
@@ -125,14 +106,14 @@ const main = async () => {
       }
 
       // create directories for new version
-      mkdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
+      mkdirSync(`./runtimes/${runtime}/${version}`);
 
       // try to download binary
       try {
         logger.info(`Downloading ${downloadLink} ...`);
 
         writeFileSync(
-          `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`,
+          `./runtimes/${runtime}/${version}/kyve.zip`,
           await download(downloadLink)
         );
       } catch (err) {
@@ -142,48 +123,35 @@ const main = async () => {
         logger.error(err);
 
         // exit and delete version folders if binary could not be downloaded
-        rmdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
+        rmdirSync(`./runtimes/${runtime}/${version}`);
         process.exit(0);
       }
 
       try {
         logger.info(
-          `Extracting binary to "./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip" ...`
+          `Extracting binary to "./runtimes/${runtime}/${version}/kyve.zip" ...`
         );
-        await extract(
-          `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`,
-          {
-            dir: path.resolve(
-              `./runtimes/${pool.runtime}/${pool.protocol.version}/`
-            ),
-          }
-        );
+        await extract(`./runtimes/${runtime}/${version}/kyve.zip`, {
+          dir: path.resolve(`./runtimes/${runtime}/${version}/`),
+        });
 
         // check if kyve.zip exists
-        if (
-          existsSync(
-            `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`
-          )
-        ) {
+        if (existsSync(`./runtimes/${runtime}/${version}/kyve.zip`)) {
           logger.info(`Deleting kyve.zip ...`);
           // delete zip afterwards
-          unlinkSync(
-            `./runtimes/${pool.runtime}/${pool.protocol.version}/kyve.zip`
-          );
+          unlinkSync(`./runtimes/${runtime}/${version}/kyve.zip`);
         }
       } catch (err) {
         logger.error("Error extracting binary to bin. Exiting KYSOR ...");
         logger.error(err);
 
         // exit and delete version folders if binary could not be extracted
-        rmdirSync(`./runtimes/${pool.runtime}/${pool.protocol.version}`);
+        rmdirSync(`./runtimes/${runtime}/${version}`);
         process.exit(0);
       }
 
-      const binName = readdirSync(
-        `./runtimes/${pool.runtime}/${pool.protocol.version}/`
-      )[0];
-      const binPath = `./runtimes/${pool.runtime}/${pool.protocol.version}/${binName}`;
+      const binName = readdirSync(`./runtimes/${runtime}/${version}/`)[0];
+      const binPath = `./runtimes/${runtime}/${version}/${binName}`;
 
       if (config.verifyChecksums) {
         const localChecksum = await getChecksum(binPath);
@@ -204,34 +172,36 @@ const main = async () => {
     }
 
     try {
-      const binName = readdirSync(
-        `./runtimes/${pool.runtime}/${pool.protocol.version}/`
-      )[0];
-      const binPath = `./runtimes/${pool.runtime}/${pool.protocol.version}/${binName}`;
+      const binName = readdirSync(`./runtimes/${runtime}/${version}/`)[0];
+      const binPath = `./runtimes/${runtime}/${version}/${binName}`;
 
       const args = [
-        `--poolId`,
-        `${config.protocolNode.poolId}`,
-        `--mnemonic`,
-        `${mnemonic}`,
+        `--pool`,
+        `${config.protocolNode.pool}`,
+        `--account`,
+        `${config.protocolNode.account}`,
+        `--wallet`,
+        `${config.protocolNode.wallet}`,
         `--network`,
         `${config.protocolNode.network}`,
-        `--keyfile`,
-        `./secrets/arweave.json`,
       ];
 
-      if (config.protocolNode.initialStake) {
-        args.push("--initialStake");
-        args.push(`${config.protocolNode.initialStake}`);
+      if (config.protocolNode.config) {
+        args.push("--config");
+        args.push(`${config.protocolNode.config}`);
       }
 
-      if (config.protocolNode.space) {
-        args.push("--space");
-        args.push(`${config.protocolNode.space}`);
+      if (config.protocolNode.usePassword) {
+        args.push("--use-password");
+        args.push(`${config.protocolNode.usePassword}`);
       }
 
       if (config.protocolNode.verbose) {
         args.push("--verbose");
+      }
+
+      if (config.protocolNode.metrics) {
+        args.push("--metrics");
       }
 
       logger.info("Starting child process ...");

@@ -1,9 +1,9 @@
 import { IConfig } from "./src/faces";
 
 const config: IConfig = {
-  // target of the host machine, can be either "linux" or "macos"
+  // target of the host machine, can be either "linux-x64", "linux-arm64" or "macos-x64"
   // important for downloading the correct binaries
-  hostTarget: "linux",
+  hostTarget: "linux-x64",
 
   // whether KYSOR should auto download new binaries
   // if set to false, you have to insert the binaries manually
@@ -18,24 +18,35 @@ const config: IConfig = {
   protocolNode: {
     // the ID of the pool you want to join as a validator
     // an overview of all pools can be found here -> https://app.kyve.network
-    poolId: 0,
+    pool: 0,
+
+    // the account name of the valaccount
+    // valaccounts can be created with the binaries -> ./binary valaccounts -h
+    account: "my_valaccount_name",
+
+    // the wallet name of the wallet for the storage provider
+    // wallets can be added with the binaries -> ./binary wallets -h
+    wallet: "my_arweave_wallet_name",
+
+    // optionally set the path to the directory where "accounts.info" is saved
+    // default path is "$HOME/.kyve-node/"
+    // config: "path/to/dir/",
+
+    // optionally set the password if the accounts should be stored encrypted with a password
+    // default accounts are stored unencrypted in "accounts.info"
+    // usePassword: "my_secret_password",
 
     // the network you want to run on
-    // currently only the testnet network "korellia" is available
-    network: "korellia",
-
-    // the amount of $KYVE you want to stake
-    // will only get applied if you are not a validator yet
-    // once you are a validator you can manage your stake in the KYVE app
-    initialStake: 100,
-
-    // the amount of bytes the node can use at max to cache data
-    // 1000000000 equals 1 GB which is usually enough
-    space: 1000000000,
+    // currently only the testnet network "beta" is available
+    network: "beta",
 
     // specify verbose logging
     // is often recommended in order to have a more detailed insight
     verbose: true,
+
+    // specify if local prometheus metrics server should run
+    // metric server will start on http:localhost:8080/metrics
+    metrics: true,
   },
 };
 

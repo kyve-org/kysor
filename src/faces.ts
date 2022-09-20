@@ -1,14 +1,15 @@
-import { KYVE_NETWORK } from "@kyve/sdk/dist/utils/constants";
-
 export interface IConfig {
-  hostTarget: "linux" | "macos";
+  hostTarget: "linux-x64" | "linux-arm64" | "macos-x64";
   autoDownload: boolean;
   verifyChecksums: boolean;
   protocolNode: {
-    poolId: number;
-    network: KYVE_NETWORK;
-    initialStake: number;
-    space: number;
+    pool: number;
+    account: string;
+    wallet: string;
+    config?: string;
+    usePassword?: string;
+    network: "beta"; // TODO: only allow beta for now
     verbose: boolean;
+    metrics: boolean;
   };
 }

@@ -23,22 +23,22 @@ export const getPool = async (
       try {
         const {
           data: { pool },
-        } = await axios.get(`${endpoint}/kyve/registry/v1beta1/pool/${poolId}`);
+        } = await axios.get(`${endpoint}/kyve/query/v1beta1/pool/${poolId}`);
 
         try {
-          pool.config = JSON.parse(pool.config);
+          pool.data.config = JSON.parse(pool.data.config);
         } catch (error) {
-          logger.error(`Failed to parse the pool config: ${pool?.config}`);
-          pool.config = {};
+          logger.error(`Failed to parse the pool config: ${pool?.data.config}`);
+          pool.data.config = {};
         }
 
         try {
-          pool.protocol.binaries = JSON.parse(pool.protocol.binaries);
+          pool.data.protocol.binaries = JSON.parse(pool.data.protocol.binaries);
         } catch (error) {
           logger.error(
-            `Failed to parse the pool binaries: ${pool?.protocol.binaries}`
+            `Failed to parse the pool binaries: ${pool?.data.protocol.binaries}`
           );
-          pool.protocol.binaries = {};
+          pool.data.protocol.binaries = {};
         }
 
         logger.info("Fetched pool state");
