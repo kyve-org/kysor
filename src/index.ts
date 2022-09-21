@@ -176,6 +176,7 @@ const main = async () => {
       const binPath = `./runtimes/${runtime}/${version}/${binName}`;
 
       const args = [
+        `start`,
         `--pool`,
         `${config.protocolNode.pool}`,
         `--account`,
