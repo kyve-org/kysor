@@ -4,10 +4,6 @@ export interface IConfig {
   verifyChecksums: boolean;
   protocolNode: {
     pool: number;
-    account: string;
-    wallet: string;
-    config?: string;
-    usePassword?: string;
     network: "beta"; // TODO: only allow beta for now
     verbose: boolean;
     metrics: boolean;

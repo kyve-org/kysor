@@ -3,7 +3,7 @@ import { IConfig } from "./src/faces";
 const config: IConfig = {
   // target of the host machine, can be either "linux-x64", "linux-arm64" or "macos-x64"
   // important for downloading the correct binaries
-  hostTarget: "linux-x64",
+  hostTarget: "macos-x64",
 
   // whether KYSOR should auto download new binaries
   // if set to false, you have to insert the binaries manually
@@ -20,25 +20,9 @@ const config: IConfig = {
     // an overview of all pools can be found here -> https://app.kyve.network
     pool: 0,
 
-    // the account name of the valaccount
-    // valaccounts can be created with the binaries -> ./binary valaccounts -h
-    account: "my_valaccount_name",
-
-    // the wallet name of the wallet for the storage provider
-    // wallets can be added with the binaries -> ./binary wallets -h
-    wallet: "my_arweave_wallet_name",
-
-    // optionally set the path to the directory where "accounts.info" is saved
-    // default path is "$HOME/.kyve-node/"
-    // config: "path/to/dir/",
-
-    // optionally set the password if the accounts should be stored encrypted with a password
-    // default accounts are stored unencrypted in "accounts.info"
-    // usePassword: "my_secret_password",
-
     // the network you want to run on
     // currently only the testnet network "beta" is available
-    network: "beta",
+    network: "alpha" as any,
 
     // specify verbose logging
     // is often recommended in order to have a more detailed insight

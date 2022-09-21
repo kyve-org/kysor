@@ -5,13 +5,19 @@ import {
   readdirSync,
   rmdirSync,
   unlinkSync,
+  readFileSync,
 } from "fs";
 import download from "download";
-import { getChecksum, getPool, startChildProcess } from "./utils";
+import {
+  getChecksum,
+  getPool,
+  startChildProcess,
+  startNodeProcess,
+} from "./utils";
 import extract from "extract-zip";
 import path from "path";
 import { Logger } from "tslog";
-import config from "./../kysor.conf";
+import config from "../kysor.conf";
 
 const logger: Logger = new Logger({
   displayFilePath: "hidden",
@@ -37,6 +43,30 @@ const main = async () => {
   }
 
   logger.info("Found kysor.conf.ts");
+
+  // verify secrets are there
+  if (!existsSync("./secrets")) {
+    logger.error(`Directory "secrets" missing. Exiting KYSOR ...`);
+    process.exit(1);
+  }
+
+  if (!existsSync("./secrets/valaccount")) {
+    logger.error(
+      `Secret "valaccount" missing in secrets directory. Exiting KYSOR ...`
+    );
+    process.exit(1);
+  }
+
+  logger.info("Found valaccount");
+
+  if (!existsSync("./secrets/wallet")) {
+    logger.error(
+      `Secret "wallet" missing in secrets directory. Exiting KYSOR ...`
+    );
+    process.exit(1);
+  }
+
+  logger.info("Found wallet");
 
   while (true) {
     // create pool directory if it does not exist yet
@@ -175,27 +205,39 @@ const main = async () => {
       const binName = readdirSync(`./runtimes/${runtime}/${version}/`)[0];
       const binPath = `./runtimes/${runtime}/${version}/${binName}`;
 
+      // add valaccount
+      const valaccount = readFileSync(`./secrets/valaccount`, "utf-8")
+        .replace(/\n/g, "")
+        .trim();
+
+      await startChildProcess(
+        binPath,
+        [`valaccounts`, `add`, `kysor-valaccount`, `${valaccount}`],
+        {}
+      );
+
+      // add wallet
+      const wallet = readFileSync(`./secrets/wallet`, "utf-8")
+        .replace(/\n/g, "")
+        .trim();
+
+      await startChildProcess(
+        binPath,
+        [`wallets`, `add`, `kysor-wallet`, `${wallet}`],
+        {}
+      );
+
       const args = [
         `start`,
         `--pool`,
         `${config.protocolNode.pool}`,
         `--account`,
-        `${config.protocolNode.account}`,
+        `kysor-valaccount`,
         `--wallet`,
-        `${config.protocolNode.wallet}`,
+        `kysor-wallet`,
         `--network`,
         `${config.protocolNode.network}`,
       ];
-
-      if (config.protocolNode.config) {
-        args.push("--config");
-        args.push(`${config.protocolNode.config}`);
-      }
-
-      if (config.protocolNode.usePassword) {
-        args.push("--use-password");
-        args.push(`${config.protocolNode.usePassword}`);
-      }
 
       if (config.protocolNode.verbose) {
         args.push("--verbose");
@@ -205,18 +247,20 @@ const main = async () => {
         args.push("--metrics");
       }
 
-      logger.info("Starting child process ...");
+      logger.info("Starting process ...");
 
       console.log("\n");
 
-      await startChildProcess(binPath, args, {});
+      await startNodeProcess(binPath, args, {});
 
       console.log("\n");
 
-      logger.info("Stopped child process ...");
+      logger.info("Stopped process ...");
     } catch (err) {
       logger.error("Found unexpected runtime error. Exiting KYSOR ...");
-      logger.error(err);
+      if (err) {
+        logger.error(err);
+      }
       process.exit(1);
     }
   }
