@@ -3,7 +3,7 @@ import { IConfig } from "./src/faces";
 const config: IConfig = {
   // target of the host machine, can be either "linux-x64", "linux-arm64" or "macos-x64"
   // important for downloading the correct binaries
-  hostTarget: "macos-x64",
+  hostTarget: "linux-x64",
 
   // whether KYSOR should auto download new binaries
   // if set to false, you have to insert the binaries manually
@@ -22,7 +22,7 @@ const config: IConfig = {
 
     // the network you want to run on
     // currently only the testnet network "beta" is available
-    network: "alpha" as any,
+    network: "beta",
 
     // specify verbose logging
     // is often recommended in order to have a more detailed insight
