@@ -117,7 +117,8 @@ const main = async () => {
         process.exit(0);
       }
 
-      const downloadLink = pool.data.protocol.binaries[config.hostTarget];
+      const downloadLink =
+        pool.data.protocol.binaries[`kyve-${config.hostTarget}`];
 
       // if download link was not found exit
       if (!downloadLink) {
